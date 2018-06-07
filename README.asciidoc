@@ -1,6 +1,37 @@
 = HAProxy Configuration for StorageGRID
 
-These are examples for configuring HAProxy in StorageGRID environments to either pass through SSL connections, terminate HTTP or use HTTPS with custom certificates. It also gives some basic configuration for CORS.
+These are examples for configuring HAProxy in StorageGRID environments to either pass through SSL connections, terminate HTTP or use HTTPS with custom certificates. It also gives some basic configuration for handling https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[Cross-Origin Resource Sharing (CORS)] requests with HAProxy.
+
+These steps are referring to HAProxy version 1.8, but will probably also work for other versions.
+
+.The following documentation for more details on HAProxy
+* http://cbonte.github.io/haproxy-dconv/1.8/intro.html[HAProxy 1.8 Starter Guide]
+* http://cbonte.github.io/haproxy-dconv/1.8/configuration.html[HAProxy 1.8 Configuration Manual]
+* http://cbonte.github.io/haproxy-dconv/1.8/management.html[HAProxy 1.8 Management Guide]
+
+== HAProxy Best Practices
+
+=== Setup
+
+Many Operating Systems offer a prebuild HAProxy package, but often they are very outdated. It is recommended to compile your own HAProxy for production use.
+
+If SSL should be terminated by HAProxy, make sure that the Server running HAproxy has AES-NI enabled. Check if AES-NI is supported with
+
+```
+cat /proc/cpuinfo  | grep aes
+```
+
+For sizing refer to the http://cbonte.github.io/haproxy-dconv/1.8/intro.html#3.5[HAProxy sizing recommendations].
+
+=== Loadbalancing Algorithm
+
+HAProxy supports http://cbonte.github.io/haproxy-dconv/1.8/configuration.html#4.2-balance[several loadbalancing algorithms]. StorageGRID requires clients to be equally distributed to the available Storage Nodes which can be achieved with round robin or least connection loadbalancing. The other loadbalancing algorithms not based on these two should not be used.
+
+.Comparison
+* Least Connection (leastconn) - this is usually the best fit, as it best prevents congestion of Storage Nodes when some connections are kept alive longer than others
+* Round Robin (roundrobin) - this is a generic fit and will work well in most cases, but has a higher probability to result in congestion of single Storage Nodes
+
+With an increasing number of Storage Nodes, the choice of loadbalancing algorithm becomes less important.
 
 == HAProxy Installation
 
@@ -86,7 +117,7 @@ Check certificate returned by HA Proxy with
 openssl s_client -showcerts -connect localhost:443
 ----
 
-Check loadbalancing with s3tester.
+Check loadbalancing with https://github.com/NetApp-StorageGRID/s3tester[s3tester].
 
 === Install HAProxy in Centos 7 with lua support
 
