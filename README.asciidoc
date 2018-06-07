@@ -28,6 +28,14 @@ cat /proc/cpuinfo  | grep aes
 
 For sizing refer to the http://cbonte.github.io/haproxy-dconv/1.8/intro.html#3.5[HAProxy sizing recommendations].
 
+=== High Availability
+
+There are several ways to achieve High Availability. One possibility is, to use floating IPs and keepalived to activate a passive HAProxy instance in case of failure. This setup is quite complicated to setup, but is a proven way to establish HA.
+
+Docker itself allows to restart HAProxy on failures. This is achieved via the `--restart=always` parameter which is used in the Docker Configuration example below. In most cases this is sufficient, as S3 and Swift clients will retry several times with several seconds wait time in between until they fail a request.
+
+There are even more sophisticated HA strategies offered by Kubernetes, Docker Swarm or Cloud Services like AWS ELB.
+
 === Loadbalancing Algorithm
 
 HAProxy supports http://cbonte.github.io/haproxy-dconv/1.8/configuration.html#4.2-balance[several loadbalancing algorithms]. StorageGRID requires clients to be equally distributed to the available Storage Nodes which can be achieved with round robin or least connection loadbalancing. The other loadbalancing algorithms not based on these two should not be used.
