@@ -313,7 +313,9 @@ core.register_service("cors-response", "http", function(applet)
 end)
 ----
 
-Install and configure HA Proxy using docker
+== HAProxy Installation
+
+=== Install and configure HA Proxy using docker
 
 .Prerequisites
 * Docker
@@ -335,7 +337,7 @@ Then copy the configuration above (with required modifications highlighted in ye
 
 Then build the docker container with the current configuration file (you may want to change the name my-haproxy):
 
-[source,bash]
+[source,shell]
 ----
 docker build -t my-haproxy .
 ----
@@ -343,86 +345,209 @@ docker build -t my-haproxy .
 Whenever you change the configuration, you need to rerun docker build.
 
 Now verify the configuration file with
-```
+
+[source,shell]
+----
 docker run -it --rm --name haproxy-syntax-check my-haproxy haproxy -c -f /usr/local/etc/haproxy/haproxy.cfg
-```
+----
 
 Make sure that Docker was build with lua support (the Docker version should be):
 
-```
+[source,shell]
+----
 docker run -it --rm --name haproxy-lua-check my-haproxy haproxy -vv | grep Lua
-```
+----
 
 If you configured HA Proxy to bind on port 80 run HA Proxy with
+
+[source,shell]
+----
 docker run -d -p 80:80 -v /dev/log:/dev/log --name haproxy my-haproxy
+----
 
 If you configured HA Proxy to bind on port 443 run HA Proxy with
+
+[source,shell]
+----
 docker run -d -p 443:443 -v /dev/log:/dev/log --name haproxy my-haproxy
+----
 
 To let HA Proxy terminate HTTPS connections and use your own certificate, you need to create a pem file which is created by concatenating both the certificate and private key PEM files.
 
 For testing you can create a self signed certificate and private key with
+
+[source,shell]
+----
 openssl req -x509 -nodes -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365
+----
 
 Append private key to certificate file
+
+[source,shell]
+----
 cat key.pem >> cert.pem
+----
 
 Note: the –v /dev/log:/dev/log argument allows the container to log to syslogd on the host.  You may need a different path to the UNIX domain socket for syslog on your flavor of Linux. Usually the logfiles can be found in /var/log/messages
 
 Check certificate returned by HA Proxy with
+
+[source,shell]
+----
 openssl s_client -showcerts -connect localhost:443
+----
 
 Check loadbalancing with s3tester.
 
-Install HAProxy in Centos 7 with lua support
+=== Install HAProxy in Centos 7 with lua support
 
-# install Development Tools to build software
+Centos 7 only includes an outdated HAProxy package without lua support. To configure HAProxy with lua support on Centos 7 you need to compile it yourself.
+
+Install Development Tools to build software
+
+[source,shell]
+----
 yum groupinstall 'Development Tools'
+----
 
-# install dependencies for building haproxy
+Install dependencies for building haproxy
+
+[source,shell]
+----
 yum install readline-devel pcre-devel openssl-devel
+----
 
-# download lua sourcecode
+Download lua sourcecode
+
+[source,shell]
+----
 curl -R -O http://www.lua.org/ftp/lua-5.3.4.tar.gz
-# extract source code
+----
+
+Extract source code
+
+[source,shell]
+----
 tar zxf lua-5.3.4.tar.gz
-# change to extracted folder
+----
+
+Change to extracted folder
+
+[source,shell]
+----
 cd lua-5.3.4
-# make lua for linux and test if build was succesfull
+----
+
+Make lua for linux and test if build was succesfull
+
+[source,shell]
+----
 make linux test
-# install lua
+----
+
+Install lua
+
+[source,shell]
+----
 make linux install
 cd ..
+----
 
-# download haproxy sourcecode
+Download haproxy sourcecode
+
+[source,shell]
+----
 curl -R -O http://www.haproxy.org/download/1.7/src/haproxy-1.7.9.tar.gz
-# extract source code
+----
+
+Extract source code
+
+[source,shell]
+----
 tar -xzf haproxy-1.7.9.tar.gz
-# change to extracted folder
+----
+
+Change to extracted folder
+
+[source,shell]
+----
 cd haproxy-1.7.9
-# make haproxy
+----
+
+Make haproxy
+
+[source,shell]
+----
 make TARGET=linux2628 USE_PCRE=1 USE_OPENSSL=1 USE_ZLIB=1 USE_CRYPT_H=1 USE_LIBCRYPT=1 USE_LUA=1 LUA_LIB=/usr/local/lib LUA_INC=/usr/local/include
-# install HAProxy
+----
+
+Install HAProxy
+
+[source,shell]
+----
 make install
-# to create a service use the example ihaproxy.init
+----
+
+To create a service use the example ihaproxy.init
+
+[source,shell]
+----
 cp examples/haproxy.init /etc/init.d/haproxy
-# make sure the file contains the correct location to the haproxy binary
+----
+
+Make sure the file contains the correct location to the haproxy binary
+
+[source,shell]
+----
 sed -i "s|/usr/sbin/\$BASENAME|$(dirname $(which haproxy))/\$BASENAME|" /etc/init.d/haproxy
-# ensure that permissions are correct for init file
+----
+
+Ensure that permissions are correct for init file
+
+[source,shell]
+----
 chmod 755 /etc/init.d/haproxy
-# reload daemons
+----
+
+Reload daemons
+
+[source,shell]
+----
 systemctl daemon-reload
-# create haproxy config directory
+----
+
+Create haproxy config directory
+
+[source,shell]
+----
 mkdir /etc/haproxy
-# create a configuration file and insert configuration!
+----
+
+Create a configuration file and insert configuration!
+
+[source,shell]
+----
 touch /etc/haproxy/haproxy.cfg
-# enable haproxy to start at system start
+----
+
+Enable haproxy to start at system start
+
+[source,shell]
+----
 systemctl enable haproxy
 cd ..
+----
 
-# optional remove Development Tools
+Optional remove Development Tools
+
+[source,shell]
+----
 yum groupremove 'Development Tools'
-# option remove build dependencies for haproxy
+----
+
+Optional remove build dependencies for haproxy
+
+[source,shell]
+----
 yum remove readline-devel pcre-devel openssl-devel
-
-
+----
