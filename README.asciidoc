@@ -1,3 +1,6 @@
+:toc:
+:toc-placement!:
+
 = HAProxy Configuration for StorageGRID
 
 These are examples for configuring HAProxy in StorageGRID environments to either pass through SSL connections, terminate HTTP or use HTTPS with custom certificates. It also gives some basic configuration for handling https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[Cross-Origin Resource Sharing (CORS)] requests with HAProxy.
@@ -9,7 +12,7 @@ These steps are referring to HAProxy version 1.8, but will probably also work fo
 * http://cbonte.github.io/haproxy-dconv/1.8/configuration.html[HAProxy 1.8 Configuration Manual]
 * http://cbonte.github.io/haproxy-dconv/1.8/management.html[HAProxy 1.8 Management Guide]
 
-:toc:
+toc::[]
 
 == HAProxy Best Practices
 
