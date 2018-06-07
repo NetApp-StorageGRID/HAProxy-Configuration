@@ -281,8 +281,8 @@ frontend tcp-in
     default_backend storagegrid
 # backend specific configuration
 backend storagegrid
-    # balance connections using roundrobin
-    balance roundrobin
+    # balance connections using leastconn or roundrobin
+    balance leastconn
     # define health check using HTTP OPTIONS call
     option httpchk OPTIONS / HTTP/1.1
     # declare backend servers
@@ -348,8 +348,8 @@ frontend http-in
 # backend specific configuration
 backend storagegrid
 
-    # balance connections using roundrobin
-    balance roundrobin
+    # balance connections using leastconn or roundrobin
+    balance leastconn
 
     # define health check using HTTP OPTIONS call
     option httpchk OPTIONS / HTTP/1.1
@@ -423,8 +423,8 @@ frontend http-in
 # backend specific configuration
 backend storagegrid
 
-    # balance connections using roundrobin
-    balance roundrobin
+    # balance connections using leastconn or roundrobin
+    balance leastconn
 
     # define health check using HTTP OPTIONS call
     option httpchk OPTIONS / HTTP/1.1
@@ -508,8 +508,8 @@ frontend http-in
 # backend specific configuration
 backend storagegrid
 
-    # balance connections using roundrobin
-    balance roundrobin
+    # balance connections using leastconn or roundrobin
+    balance leastconn
 
     # define health check using HTTP OPTIONS call
     option httpchk OPTIONS / HTTP/1.1
