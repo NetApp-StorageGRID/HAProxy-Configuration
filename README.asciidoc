@@ -9,6 +9,8 @@ These steps are referring to HAProxy version 1.8, but will probably also work fo
 * http://cbonte.github.io/haproxy-dconv/1.8/configuration.html[HAProxy 1.8 Configuration Manual]
 * http://cbonte.github.io/haproxy-dconv/1.8/management.html[HAProxy 1.8 Management Guide]
 
+:toc:
+
 == HAProxy Best Practices
 
 === Setup
@@ -203,14 +205,14 @@ Extract source code
 
 [source,shell]
 ----
-tar -xzf haproxy-1.7.9.tar.gz
+tar -xzf haproxy-1.8.9.tar.gz
 ----
 
 Change to extracted folder
 
 [source,shell]
 ----
-cd haproxy-1.7.9
+cd haproxy-1.8.9
 ----
 
 Make haproxy
