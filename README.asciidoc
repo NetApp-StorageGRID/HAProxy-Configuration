@@ -1,0 +1,428 @@
+= HAProxy Configuration for StorageGRID
+
+These are examples for configuring HAProxy in StorageGRID environments to either pass through SSL connections, terminate HTTP or use HTTPS with custom certificates. It also gives some basic configuration for CORS.
+
+== HAProxy Examples
+
+=== HAProxy with SSL passthrough
+
+The following describes a configuration file for SSL passthrough (e.g. SSL will be terminated on the StorageGRID storage nodes and not on the HA Proxy). This is usually a good setup if there are no special requirements for SSL and if there are no special requirements with regards to custom HTTP headers. If in doubt, use this configuration:
+
+.haproxy.cfg
+----
+# global parameters
+global
+    # Logging to syslog facility local0
+    log /dev/log local0
+# Proxy default configuration common for all frontend and backends
+defaults
+    # passthrough any traffic via TCP
+    mode tcp
+    # apply log settings from the global section above to services
+    log global
+    # If sending a request to one server fails, try to send it to another, 3 times before aborting the request
+    retries 3
+    # Do not enforce session affinity (i.e., an HTTP session can be served by any node)
+    option redispatch
+    # Maximum number of simultaneous active connections from an upstream web server per service
+    maxconn 2000
+    # Set the maximum time to wait for a connection attempt to a server to succeed
+    timeout connect 5s
+    # Set the maximum inactivity time on the client side.
+    timeout client 50s
+    # Set the maximum inactivity time on the server side.
+    timeout server 50s
+# frontend specific configuration
+frontend tcp-in
+    # bind to all network interfaces on port 443, restrict to specific IP if necessary!
+    bind *:443
+    # for debugging purposes uncommenting the following option will enable basic TCP logging information
+    #option tcplog
+    # define a default backend
+    default_backend storagegrid
+# backend specific configuration
+backend storagegrid
+    # balance connections using roundrobin
+    balance roundrobin
+    # define health check using HTTP OPTIONS call
+    option httpchk OPTIONS / HTTP/1.1
+    # declare backend servers
+    # check-ssl enables the health check using a SSL connection
+    # verify none disables certificate verifications, use verify required to enforce certificate verifications
+    server grid1-sn1 172.16.92.20:18082 check-ssl verify none
+    server grid1-sn2 172.16.92.21:18082 check-ssl verify none
+    server grid1-sn3 172.16.92.22:18082 check-ssl verify none
+    server grid1-sn4 172.16.92.23:18082 check-ssl verify none
+----
+
+=== HAProxy with HTTP
+
+The following is an example configuration when the HA Proxy should accept HTTP only (e.g. no HTTPS). Connections to the Storage Nodes are done via HTTPS in the backend:
+
+.haproxy.cfg
+----
+# global parameters
+global
+
+    # Logging to syslog facility local0
+    log /dev/log local0
+
+# Proxy default configuration common for all frontend and backends
+defaults
+
+    # accept connections via HTTP
+    mode http
+
+    # apply log settings from the global section above to services
+    log global
+
+    # If sending a request to one server fails, try to send it to another, 3 times before aborting the request
+    retries 3
+
+    # Do not enforce session affinity (i.e., an HTTP session can be served by any node)
+    option redispatch
+
+    # Maximum number of simultaneous active connections from an upstream web server per service
+    maxconn 2000
+
+    # Set the maximum time to wait for a connection attempt to a server to succeed
+    timeout connect 5s
+
+    # Set the maximum inactivity time on the client side.
+    timeout client 50s
+
+    # Set the maximum inactivity time on the server side.
+    timeout server 50s
+
+# frontend specific configuration
+frontend http-in
+
+    # bind to all network interfaces on port 80, restrict to specific IP if necessary!
+    bind *:80
+
+    # for debugging purposes uncommenting the following option will enable HTTP logging
+    #option httplog
+
+    # define a default backend
+    default_backend storagegrid
+
+# backend specific configuration
+backend storagegrid
+
+    # balance connections using roundrobin
+    balance roundrobin
+
+    # define health check using HTTP OPTIONS call
+    option httpchk OPTIONS / HTTP/1.1
+
+    # declare backend servers
+    # check enables the health check
+    # ssl enables SSL for connections to the server
+    # verify none disables certificate verifications remove the option to enable certificate checks (recommended)
+    server grid1-sn1 172.16.92.20:18082 check ssl verify none
+    server grid1-sn2 172.16.92.21:18082 check ssl verify none
+    server grid1-sn3 172.16.92.22:18082 check ssl verify none
+    server grid1-sn4 172.16.92.23:18082 check ssl verify none
+----
+
+=== HAProxy with SSL termination
+
+The following is an example config where the HA Proxy terminates SSL with its own certificate and also connects to the Storage Nodes using SSL:
+
+.haproxy.cfg
+----
+# global parameters
+global
+
+    # Logging to syslog facility local0
+    log /dev/log local0
+
+    # Sets the maximum size of the Diffie-Hellman parameters used for generatingthe ephemeral/temporary Diffie-Hellman key in case of DHE key exchange
+    tune.ssl.default-dh-param 2048
+
+# Proxy default configuration common for all frontend and backends
+defaults
+
+    # accept connections via HTTP
+    mode http
+
+    # apply log settings from the global section above to services
+    log global
+
+    # If sending a request to one server fails, try to send it to another, 3 times before aborting the request
+    retries 3
+
+    # Do not enforce session affinity (i.e., an HTTP session can be served by any node)
+    option redispatch
+
+    # Maximum number of simultaneous active connections from an upstream web server per service
+    maxconn 2000
+
+    # Set the maximum time to wait for a connection attempt to a server to succeed
+    timeout connect 5s
+
+    # Set the maximum inactivity time on the client side.
+    timeout client 50s
+
+    # Set the maximum inactivity time on the server side.
+    timeout server 50s
+
+# frontend specific configuration
+frontend http-in
+
+    # bind to all network interfaces on port 443, restrict to specific IP if necessary!
+    # ssl enables SSL deciphering by HA Proxy
+    # crt specifies the path to the file containing the concatenation of certificate and private key inside the docker container
+    bind *:443 ssl crt /usr/local/etc/haproxy/cert.pem
+
+    # for debugging purposes uncommenting the following option will enable HTTP logging
+    #option httplog
+
+    # define a default backend
+    default_backend storagegrid
+
+# backend specific configuration
+backend storagegrid
+
+    # balance connections using roundrobin
+    balance roundrobin
+
+    # define health check using HTTP OPTIONS call
+    option httpchk OPTIONS / HTTP/1.1
+
+    # declare backend servers
+    # check enables the health check
+    # ssl enables SSL for connections to the server
+    # verify none disables certificate verifications remove the option to enable certificate checks (recommended)
+    server grid1-sn1 172.16.92.20:18082 check ssl verify none
+    server grid1-sn2 172.16.92.21:18082 check ssl verify none
+    server grid1-sn3 172.16.92.22:18082 check ssl verify none
+    server grid1-sn4 172.16.92.23:18082 check ssl verify none
+----
+
+=== HAProxy with SSL termination and custom CORS
+
+The following is an example config where the HA Proxy terminates SSL with its own certificate and also connects to the Storage Nodes using SSL. In this configuration HA Proxy additionally supports Preflight Cross-Origin Resource Sharing (CORS) requests:
+
+.haproxy.cfg
+----
+# global parameters
+global
+    # load lua script for CORS Preflight
+    lua-load /usr/local/etc/haproxy/cors.lua
+
+    # Logging to syslog facility local0
+    log /dev/log local0
+
+    # Sets the maximum size of the Diffie-Hellman parameters used for generatingthe ephemeral/temporary Diffie-Hellman key in case of DHE key exchange
+    tune.ssl.default-dh-param 2048
+
+# Proxy default configuration common for all frontend and backends
+defaults
+
+    # accept connections via HTTP
+    mode http
+
+    # apply log settings from the global section above to services
+    log global
+
+    # If sending a request to one server fails, try to send it to another, 3 times before aborting the request
+    retries 3
+
+    # Do not enforce session affinity (i.e., an HTTP session can be served by any node)
+    option redispatch
+
+    # Maximum number of simultaneous active connections from an upstream web server per service
+    maxconn 2000
+
+    # Set the maximum time to wait for a connection attempt to a server to succeed
+    timeout connect 5s
+
+    # Set the maximum inactivity time on the client side.
+    timeout client 50s
+
+    # Set the maximum inactivity time on the server side.
+    timeout server 50s
+
+# frontend specific configuration
+frontend http-in
+
+    # bind to all network interfaces on port 443, restrict to specific IP if necessary!
+    # ssl enables SSL deciphering by HA Proxy
+    # crt specifies the path to the file containing the concatenation of certificate and private key inside the docker container
+    bind *:443 ssl crt /usr/local/etc/haproxy/cert.pem
+
+    # for debugging purposes uncommenting the following option will enable HTTP logging
+    #option httplog
+
+    # define a default backend
+    default_backend storagegrid
+
+    # CORS configuration
+    # capture origin HTTP header
+    capture request header origin len 128
+    # add Access-Control-Allow-Origin HTTP header to response if origin matches the list of allowed URLs
+    http-response add-header Access-Control-Allow-Origin %[capture.req.hdr(0)] if !METH_OPTIONS { capture.req.hdr(0) -m reg -f /usr/local/etc/haproxy/cors-origins.lst }
+    # if a preflight request is made, use lua for CORS preflight
+    http-request use-service lua.cors-response if METH_OPTIONS { capture.req.hdr(0) -m reg -f /usr/local/etc/haproxy/cors-origins.lst }
+
+# backend specific configuration
+backend storagegrid
+
+    # balance connections using roundrobin
+    balance roundrobin
+
+    # define health check using HTTP OPTIONS call
+    option httpchk OPTIONS / HTTP/1.1
+
+    # declare backend servers
+    # check enables the health check
+    # ssl enables SSL for connections to the server
+    # verify none disables certificate verifications remove the option to enable certificate checks (recommended)
+    server grid1-sn1 172.16.92.20:18082 check ssl verify none
+    server grid1-sn2 172.16.92.21:18082 check ssl verify none
+    server grid1-sn3 172.16.92.22:18082 check ssl verify none
+    server grid1-sn4 172.16.92.23:18082 check ssl verify none
+----
+
+For CORS to work, you need to create the files called cors-origins.lst and cors.lua which will be included in Docker.
+
+The cors-origins.lst contains a list of regular expressions which define which origins are allowed. If a client sends an HTTP Origin Header, HAProxy will match it against each line of this file. Each line is interpreted as regular expression!
+
+.cors-origins.lst
+----
+file:
+example.com
+localhost.*
+.*\.mydomain\.com:[8080|8443]
+----
+
+To do the dynamic CORS Preflight, a lua script is required. Create the file cors.lua with the following content:
+
+.cors.lua
+----
+core.register_service("cors-response", "http", function(applet)
+    applet:set_status(200)
+    applet:add_header("Content-Length", "0")
+    applet:add_header("Access-Control-Allow-Origin", applet.headers["origin"][0])
+    applet:add_header("Access-Control-Allow-Credentials", "true")
+    applet:add_header("Access-Control-Allow-Headers", "*")
+    applet:add_header("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, DELETE, PATCH, OPTIONS")
+    applet:add_header("Access-Control-Max-Age", "1728000")
+    applet:start_response()
+end)
+----
+
+Install and configure HA Proxy using docker
+
+.Prerequisites
+* Docker
+* Syslog (e.g. syslog-ng or rsyslog)
+
+This is suitable to run with the official Docker haproxy container from Docker Hub: https://hub.docker.com/_/haproxy/
+
+To run this on a Linux server, for example, first create a Dockerfile with the following content:
+
+.Dockerfile
+----
+FROM haproxy:latest
+COPY haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg
+COPY *.pem /usr/local/etc/haproxy/
+COPY cors* /usr/local/etc/haproxy/
+----
+
+Then copy the configuration above (with required modifications highlighted in yellow) into haproxy.cfg
+
+Then build the docker container with the current configuration file (you may want to change the name my-haproxy):
+
+[source,bash]
+----
+docker build -t my-haproxy .
+----
+
+Whenever you change the configuration, you need to rerun docker build.
+
+Now verify the configuration file with
+```
+docker run -it --rm --name haproxy-syntax-check my-haproxy haproxy -c -f /usr/local/etc/haproxy/haproxy.cfg
+```
+
+Make sure that Docker was build with lua support (the Docker version should be):
+
+```
+docker run -it --rm --name haproxy-lua-check my-haproxy haproxy -vv | grep Lua
+```
+
+If you configured HA Proxy to bind on port 80 run HA Proxy with
+docker run -d -p 80:80 -v /dev/log:/dev/log --name haproxy my-haproxy
+
+If you configured HA Proxy to bind on port 443 run HA Proxy with
+docker run -d -p 443:443 -v /dev/log:/dev/log --name haproxy my-haproxy
+
+To let HA Proxy terminate HTTPS connections and use your own certificate, you need to create a pem file which is created by concatenating both the certificate and private key PEM files.
+
+For testing you can create a self signed certificate and private key with
+openssl req -x509 -nodes -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365
+
+Append private key to certificate file
+cat key.pem >> cert.pem
+
+Note: the –v /dev/log:/dev/log argument allows the container to log to syslogd on the host.  You may need a different path to the UNIX domain socket for syslog on your flavor of Linux. Usually the logfiles can be found in /var/log/messages
+
+Check certificate returned by HA Proxy with
+openssl s_client -showcerts -connect localhost:443
+
+Check loadbalancing with s3tester.
+
+Install HAProxy in Centos 7 with lua support
+
+# install Development Tools to build software
+yum groupinstall 'Development Tools'
+
+# install dependencies for building haproxy
+yum install readline-devel pcre-devel openssl-devel
+
+# download lua sourcecode
+curl -R -O http://www.lua.org/ftp/lua-5.3.4.tar.gz
+# extract source code
+tar zxf lua-5.3.4.tar.gz
+# change to extracted folder
+cd lua-5.3.4
+# make lua for linux and test if build was succesfull
+make linux test
+# install lua
+make linux install
+cd ..
+
+# download haproxy sourcecode
+curl -R -O http://www.haproxy.org/download/1.7/src/haproxy-1.7.9.tar.gz
+# extract source code
+tar -xzf haproxy-1.7.9.tar.gz
+# change to extracted folder
+cd haproxy-1.7.9
+# make haproxy
+make TARGET=linux2628 USE_PCRE=1 USE_OPENSSL=1 USE_ZLIB=1 USE_CRYPT_H=1 USE_LIBCRYPT=1 USE_LUA=1 LUA_LIB=/usr/local/lib LUA_INC=/usr/local/include
+# install HAProxy
+make install
+# to create a service use the example ihaproxy.init
+cp examples/haproxy.init /etc/init.d/haproxy
+# make sure the file contains the correct location to the haproxy binary
+sed -i "s|/usr/sbin/\$BASENAME|$(dirname $(which haproxy))/\$BASENAME|" /etc/init.d/haproxy
+# ensure that permissions are correct for init file
+chmod 755 /etc/init.d/haproxy
+# reload daemons
+systemctl daemon-reload
+# create haproxy config directory
+mkdir /etc/haproxy
+# create a configuration file and insert configuration!
+touch /etc/haproxy/haproxy.cfg
+# enable haproxy to start at system start
+systemctl enable haproxy
+cd ..
+
+# optional remove Development Tools
+yum groupremove 'Development Tools'
+# option remove build dependencies for haproxy
+yum remove readline-devel pcre-devel openssl-devel
+
+
