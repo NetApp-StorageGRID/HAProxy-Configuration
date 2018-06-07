@@ -306,40 +306,58 @@ The following describes a configuration file for SSL passthrough (e.g. SSL will 
 ----
 # global parameters
 global
+
     # Logging to syslog facility local0
     log /dev/log local0
+
 # Proxy default configuration common for all frontend and backends
 defaults
+
     # passthrough any traffic via TCP
     mode tcp
+
     # apply log settings from the global section above to services
     log global
+
     # If sending a request to one server fails, try to send it to another, 3 times before aborting the request
     retries 3
+
     # Do not enforce session affinity (i.e., an HTTP session can be served by any node)
     option redispatch
-    # Maximum number of simultaneous active connections from an upstream web server per service
-    maxconn 2000
+
+    # Maximum number of simultaneous active connections from an upstream client
+    maxconn 5000
+
     # Set the maximum time to wait for a connection attempt to a server to succeed
     timeout connect 5s
+
     # Set the maximum inactivity time on the client side.
     timeout client 50s
+
     # Set the maximum inactivity time on the server side.
     timeout server 50s
+
 # frontend specific configuration
 frontend tcp-in
+
     # bind to all network interfaces on port 443, restrict to specific IP if necessary!
     bind *:443
+
     # for debugging purposes uncommenting the following option will enable basic TCP logging information
     #option tcplog
+
     # define a default backend
     default_backend storagegrid
+
 # backend specific configuration
 backend storagegrid
+
     # balance connections using leastconn or roundrobin
     balance leastconn
+
     # define health check using HTTP OPTIONS call
     option httpchk OPTIONS / HTTP/1.1
+
     # declare backend servers
     # check-ssl enables the health check using a SSL connection
     # verify none disables certificate verifications, use verify required to enforce certificate verifications
@@ -376,8 +394,8 @@ defaults
     # Do not enforce session affinity (i.e., an HTTP session can be served by any node)
     option redispatch
 
-    # Maximum number of simultaneous active connections from an upstream web server per service
-    maxconn 2000
+    # Maximum number of simultaneous active connections from an upstream client
+    maxconn 5000
 
     # Set the maximum time to wait for a connection attempt to a server to succeed
     timeout connect 5s
@@ -449,8 +467,8 @@ defaults
     # Do not enforce session affinity (i.e., an HTTP session can be served by any node)
     option redispatch
 
-    # Maximum number of simultaneous active connections from an upstream web server per service
-    maxconn 2000
+    # Maximum number of simultaneous active connections from an upstream client
+    maxconn 5000
 
     # Set the maximum time to wait for a connection attempt to a server to succeed
     timeout connect 5s
@@ -526,8 +544,8 @@ defaults
     # Do not enforce session affinity (i.e., an HTTP session can be served by any node)
     option redispatch
 
-    # Maximum number of simultaneous active connections from an upstream web server per service
-    maxconn 2000
+    # Maximum number of simultaneous active connections from an upstream client
+    maxconn 5000
 
     # Set the maximum time to wait for a connection attempt to a server to succeed
     timeout connect 5s
