@@ -13,7 +13,7 @@ These steps are referring to HAProxy version 1.8, but will probably also work fo
 
 === Setup
 
-Many Operating Systems offer a prebuild HAProxy package, but often they are very outdated. It is recommended to compile your own HAProxy for production use.
+Many Operating Systems offer a prebuild HAProxy package, but often they are very outdated. It is recommended to use the official docker image or compile your own HAProxy for production use.
 
 If SSL should be terminated by HAProxy, make sure that the Server running HAproxy has AES-NI enabled. Check if AES-NI is supported with
 
@@ -49,11 +49,28 @@ To run this on a Linux server, for example, first create a Dockerfile with the f
 ----
 FROM haproxy:latest
 COPY haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg
+----
+
+If you want to include pem files for setting up SSL, then use the following:
+
+.Dockerfile
+----
+FROM haproxy:latest
+COPY haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg
+COPY *.pem /usr/local/etc/haproxy/
+----
+
+If you want to additionally enable CORS, then you need to include the CORS files with
+
+.Dockerfile
+----
+FROM haproxy:latest
+COPY haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg
 COPY *.pem /usr/local/etc/haproxy/
 COPY cors* /usr/local/etc/haproxy/
 ----
 
-Then copy the configuration above (with required modifications highlighted in yellow) into haproxy.cfg
+Then copy one of the configuration examples below (adopted to your environment) into haproxy.cfg.
 
 Then build the docker container with the current configuration file (you may want to change the name my-haproxy):
 
@@ -71,7 +88,7 @@ Now verify the configuration file with
 docker run -it --rm --name haproxy-syntax-check my-haproxy haproxy -c -f /usr/local/etc/haproxy/haproxy.cfg
 ----
 
-Make sure that Docker was build with lua support (the Docker version should be):
+Make sure that Docker image was build with lua support:
 
 [source,shell]
 ----
@@ -119,9 +136,11 @@ openssl s_client -showcerts -connect localhost:443
 
 Check loadbalancing with https://github.com/NetApp-StorageGRID/s3tester[s3tester].
 
-=== Install HAProxy in Centos 7 with lua support
+=== Install HAProxy from source on Centos
 
-Centos 7 only includes an outdated HAProxy package without lua support. To configure HAProxy with lua support on Centos 7 you need to compile it yourself.
+To configure HAProxy with lua support on Centos 7 you need to compile it yourself.
+
+The following steps will be similar for other distributions.
 
 Install Development Tools to build software
 
@@ -177,7 +196,7 @@ Download haproxy sourcecode
 
 [source,shell]
 ----
-curl -R -O http://www.haproxy.org/download/1.7/src/haproxy-1.7.9.tar.gz
+curl -R -O http://www.haproxy.org/download/1.8/src/haproxy-1.8.9.tar.gz
 ----
 
 Extract source code
