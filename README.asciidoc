@@ -38,6 +38,12 @@ HAProxy supports http://cbonte.github.io/haproxy-dconv/1.8/configuration.html#4.
 
 With an increasing number of Storage Nodes, the choice of loadbalancing algorithm becomes less important.
 
+=== Performance tuning
+
+One of the central parameters for tuning number of connections is the `maxconn` parameter. It can be automatically set by HAProxy if a memory limit is specified (via `haproxy -m` command line option). In the examples below `maxconn` is explicitly set to 5000 (raised from the default 2000), but can be further raised depending on memory availability or can be handled automatically by haproxy when a memory limit is set.
+
+Refer to the http://cbonte.github.io/haproxy-dconv/1.8/configuration.html#3.2[Performance tuning section of the Configuration guide] for details.
+
 == HAProxy Installation
 
 === Install and configure HA Proxy using docker
